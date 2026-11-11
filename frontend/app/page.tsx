@@ -287,6 +287,7 @@ function HomeInner() {
   const [query, setQuery] = useState("Buy Sony WH-1000XM5 headphones");
   const [sessionResult, setSessionResult] = useState<SSEEvent | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [liveSearch, setLiveSearch] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const stepsEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
@@ -313,7 +314,7 @@ function HomeInner() {
         body: JSON.stringify({
           query,
           canary,
-          sites: DEMO_SITES,
+          sites: liveSearch ? undefined : DEMO_SITES,
         }),
       });
 
@@ -445,6 +446,25 @@ function HomeInner() {
                 animate={{ left: canaryEnabled ? 22 : 3 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 style={{ width: 18, height: 18 }}
+              />
+            </button>
+          </label>
+          <div className="w-px h-5 bg-[#1e1e2e]" />
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <span className={liveSearch ? "text-cyan-400 font-bold" : "text-gray-500"}>
+              {liveSearch ? "LIVE" : "DEMO"}
+            </span>
+            <button
+              onClick={() => setLiveSearch(!liveSearch)}
+              className={`w-9 h-5 rounded-full transition-all relative ${
+                liveSearch
+                  ? "bg-cyan-600 shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                  : "bg-gray-700"
+              }`}
+            >
+              <div
+                className="w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all"
+                style={{ left: liveSearch ? 18 : 3 }}
               />
             </button>
           </label>

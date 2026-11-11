@@ -43,10 +43,8 @@ class ShopperAgent:
     def search_products(self, query: str, sites: list[dict] | None = None) -> list[ProductListing]:
         """Search for products across merchant sites.
 
-        For the demo, we accept pre-configured sites (scam + legit) to ensure
-        a reliable demo flow. In production, this would do real web search.
-
-        sites: list of {"domain": ..., "url": ..., "name": ..., "price": ..., "reviews": ...}
+        If sites are provided, uses those directly (demo mode).
+        Otherwise, does real web search via Kernel cloud browser.
         """
         if sites:
             return [
@@ -61,7 +59,84 @@ class ShopperAgent:
                 )
                 for s in sites
             ]
-        return []
+        return self._web_search(query)
+
+    def _web_search(self, query: str) -> list[ProductListing]:
+        """Search for real products via Kernel cloud browser using Google search.
+        Extracts product text from the page body and parses merchant + price."""
+        import re as _re
+        try:
+            browser = self.kernel.browsers.create(timeout_seconds=90)
+            sid = browser.session_id
+
+            search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
+            result = self.kernel.browsers.playwright.execute(
+                sid,
+                code=f'''
+                    await page.goto("{search_url}", {{ waitUntil: "domcontentloaded", timeout: 25000 }});
+                    await page.waitForTimeout(3000);
+                    const bodyText = await page.locator("body").innerText({{ timeout: 5000 }});
+                    return bodyText.substring(0, 4000);
+                ''',
+            )
+
+            self.kernel.browsers.delete_by_id(sid)
+            body = result.result
+
+            listings = []
+            lines = [l.strip() for l in body.split("\n") if l.strip()]
+            skip_words = {"free", "sale", "sponsored", "buy", "add to", "shop", "more", "tools",
+                          "all", "shopping", "images", "news", "videos", "short", "search",
+                          "sign in", "accessibility", "skip to", "ai mode", "new york"}
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+                price_match = _re.match(r'^\$(\d{1,4}(?:,\d{3})*(?:\.\d{1,2})?)$', line)
+                if price_match:
+                    price = float(price_match.group(1).replace(",", ""))
+                    name = query
+                    merchant = ""
+                    for j in range(i - 1, max(i - 5, -1), -1):
+                        prev = lines[j]
+                        if len(prev) > 20 and "$" not in prev and prev.lower() not in skip_words:
+                            name = prev[:120]
+                            break
+                    for j in range(i + 1, min(i + 4, len(lines))):
+                        nxt = lines[j]
+                        if nxt.startswith("$") or nxt.startswith("(") or nxt.lower().startswith("free"):
+                            continue
+                        if 1 < len(nxt) < 30 and "$" not in nxt and nxt.lower() not in skip_words:
+                            merchant = nxt.split("(")[0].strip()
+                            break
+                    if merchant:
+                        domain_map = {
+                            "best buy": "bestbuy.com", "b&h": "bhphotovideo.com",
+                            "b&h photo": "bhphotovideo.com", "b&h photo-video-audio": "bhphotovideo.com",
+                            "target": "target.com", "wal-mart": "walmart.com",
+                        }
+                        ml = merchant.lower()
+                        raw = ml.replace(" ", "").replace("'", "")
+                        domain = domain_map.get(ml, raw if "." in raw else raw + ".com")
+                        listings.append(ProductListing(
+                            name=name,
+                            price=price,
+                            currency="USD",
+                            merchant_domain=domain,
+                            merchant_url=f"https://{domain}",
+                            description=f"Found via Google — {merchant}",
+                        ))
+                i += 1
+
+            seen = set()
+            unique = []
+            for l in listings:
+                if l.merchant_domain not in seen:
+                    seen.add(l.merchant_domain)
+                    unique.append(l)
+            return unique[:8]
+
+        except Exception as e:
+            return []
 
     def browse_site(self, url: str) -> dict:
         """Browse a real site via Kernel cloud browser and extract page data."""
@@ -102,7 +177,10 @@ class ShopperAgent:
 
     def select_best(self, listings: list[ProductListing]) -> ProductListing:
         """Select the best deal. The shopper optimizes for price (this is the flaw Canary catches)."""
-        return min(listings, key=lambda x: x.price)
+        priced = [l for l in listings if l.price > 0]
+        if priced:
+            return min(priced, key=lambda x: x.price)
+        return listings[0]
 
     def generate_claims(self, listing: ProductListing) -> list[str]:
         """Generate the shopper's assumptions/claims about the selected product."""
