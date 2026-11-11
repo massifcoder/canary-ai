@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from backend.agents.shopper import ShopperAgent, ShopperResult
 from backend.agents.guardian import GuardianAgent, GuardianVerdict
 from backend.safety.bypass_monitor import BypassMonitor
-from backend.db.models import Transaction, save_transaction, save_bypass_attempt, upsert_merchant
+from backend.db.models import Transaction, save_transaction, save_bypass_attempt, upsert_merchant, update_transaction_verdict
 
 
 @dataclass
@@ -27,6 +27,7 @@ class SessionResult:
     order_id: str | None = None
     bypass_attempted: bool = False
     rejected_domains: list[str] = field(default_factory=list)
+    tx_id: int | None = None
 
     def add_event(self, role: str, content: str, data: dict | None = None):
         self.events.append(ConversationEvent(role=role, content=content, data=data))
@@ -157,11 +158,15 @@ class Orchestrator:
             order_id = self._create_order(selected, emit)
             session.order_id = order_id
             session.final_verdict = "USER_APPROVED"
+            if session.tx_id:
+                update_transaction_verdict(session.tx_id, "USER_APPROVED", order_id)
             return session
 
-        # User declined — try next option
+        # User declined — update the original row, then try next option
         rejected = session.shopper_result.selected
         session.rejected_domains.append(rejected.merchant_domain)
+        if session.tx_id:
+            update_transaction_verdict(session.tx_id, "USER_CANCELLED")
         emit("user", f"Declined {rejected.merchant_domain}. Find an alternative.")
 
         # Find next viable listing
@@ -173,7 +178,6 @@ class Orchestrator:
         if not candidates:
             emit("system", "No more alternatives available. Transaction cancelled.")
             session.final_verdict = "USER_CANCELLED"
-            self._save_to_db(session, rejected)
             return session
 
         # Pick next cheapest
@@ -286,6 +290,7 @@ class Orchestrator:
             bypass_attempted=session.bypass_attempted,
         )
         tx_id = save_transaction(tx)
+        session.tx_id = tx_id
 
         if session.bypass_attempted:
             for attempt in self.bypass_monitor.bypass_attempts:

@@ -145,6 +145,17 @@ def upsert_merchant(domain: str, domain_age_days: int | None, ssl_valid: bool, s
     conn.close()
 
 
+def update_transaction_verdict(tx_id: int, verdict: str, order_id: str | None = None, bypass_attempted: bool = False):
+    conn = get_db()
+    conn.execute(
+        """UPDATE transactions SET verdict = ?, paypal_order_id = ?, bypass_attempted = ?
+        WHERE id = ?""",
+        (verdict, order_id, 1 if bypass_attempted else 0, tx_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_all_transactions() -> list[dict]:
     conn = get_db()
     rows = conn.execute("SELECT * FROM transactions ORDER BY created_at DESC").fetchall()
