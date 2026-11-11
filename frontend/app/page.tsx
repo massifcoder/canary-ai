@@ -36,6 +36,13 @@ interface SSEEvent {
   bypass_attempted?: boolean;
   trust_score?: number;
   trust_breakdown?: Record<string, number>;
+  expectation?: {
+    match_score: number;
+    user_expects: string;
+    product_reality: string;
+    mismatches: string[];
+    reasoning: string;
+  };
 }
 
 function roleColor(role: string): string {
@@ -546,29 +553,56 @@ function HomeInner() {
 
             {isRunning && chatEvents.length > 0 && <PulsingDots />}
 
-            {sessionResult?.verdict === "AWAITING_USER" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex gap-3 items-center p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mt-2"
-              >
-                <span className="text-sm text-yellow-400 flex-1">
-                  ⚠️ Guardian flagged concerns. Proceed anyway?
-                </span>
-                <button
-                  onClick={() => sendConsent(true)}
-                  className="px-4 py-1.5 text-sm bg-green-600 hover:bg-green-500 rounded-md transition-colors font-medium"
+            {sessionResult?.verdict === "AWAITING_USER" && (() => {
+              const reasons: string[] = [];
+              if (sessionResult.trust_score != null) {
+                reasons.push(`Trust score: ${sessionResult.trust_score}/100`);
+              }
+              if (sessionResult.expectation) {
+                reasons.push(`Product match: ${sessionResult.expectation.match_score}/100`);
+                (sessionResult.expectation.mismatches || []).slice(0, 2).forEach((m: string) => reasons.push(m));
+              }
+              const guardianMsgs = events.filter(e => e.role === "guardian" && e.content?.includes("unverified"));
+              guardianMsgs.slice(0, 2).forEach(e => {
+                const claim = e.content?.match(/\] (.+?) →/)?.[1];
+                if (claim) reasons.push(`Unverified: ${claim}`);
+              });
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mt-2 space-y-3"
                 >
-                  Approve
-                </button>
-                <button
-                  onClick={() => sendConsent(false)}
-                  className="px-4 py-1.5 text-sm bg-red-600 hover:bg-red-500 rounded-md transition-colors font-medium"
-                >
-                  Deny
-                </button>
-              </motion.div>
-            )}
+                  <div className="text-sm font-semibold text-yellow-400">
+                    ⚠️ Guardian flagged concerns — your decision needed:
+                  </div>
+                  {reasons.length > 0 && (
+                    <ul className="space-y-1 ml-1">
+                      {reasons.map((r, i) => (
+                        <li key={i} className="text-xs text-yellow-300/80 flex items-start gap-2">
+                          <span className="text-yellow-500 mt-0.5">•</span>
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      onClick={() => sendConsent(true)}
+                      className="px-4 py-1.5 text-sm bg-green-600 hover:bg-green-500 rounded-md transition-colors font-medium"
+                    >
+                      Approve anyway
+                    </button>
+                    <button
+                      onClick={() => sendConsent(false)}
+                      className="px-4 py-1.5 text-sm bg-red-600 hover:bg-red-500 rounded-md transition-colors font-medium"
+                    >
+                      Cancel purchase
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })()}
 
             <div ref={chatEndRef} />
           </div>
@@ -731,6 +765,41 @@ function HomeInner() {
                       score={trustBreakdown.registry ?? 0}
                       label="Registry"
                     />
+                  </div>
+                )}
+
+                {sessionResult.expectation && (
+                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 uppercase tracking-wider">Expectation vs Reality</span>
+                      <span className={`text-sm font-bold font-mono ${
+                        sessionResult.expectation.match_score >= 70 ? "text-green-400"
+                        : sessionResult.expectation.match_score >= 40 ? "text-yellow-400"
+                        : "text-red-400"
+                      }`}>
+                        {sessionResult.expectation.match_score}/100
+                      </span>
+                    </div>
+                    <div className="text-xs space-y-1.5">
+                      <div className="flex gap-2">
+                        <span className="text-blue-400 shrink-0">Expects:</span>
+                        <span className="text-gray-400">{sessionResult.expectation.user_expects}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-orange-400 shrink-0">Reality:</span>
+                        <span className="text-gray-400">{sessionResult.expectation.product_reality}</span>
+                      </div>
+                      {sessionResult.expectation.mismatches?.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {sessionResult.expectation.mismatches.slice(0, 3).map((m, i) => (
+                            <div key={i} className="text-yellow-400/80 flex items-start gap-1.5">
+                              <span className="text-yellow-500 mt-0.5">⚠</span>
+                              <span>{m}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
