@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
+import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
+import type { ColDef, ICellRendererParams, CellStyle } from "ag-grid-community";
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -54,24 +59,24 @@ function StatCard({
   );
 }
 
-function VerdictBadge({ verdict }: { verdict: string }) {
-  const style: Record<string, string> = {
-    BLOCKED: "bg-red-500/20 text-red-400 border-red-500/30",
-    APPROVED: "bg-green-500/20 text-green-400 border-green-500/30",
-    AWAITING_USER: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    USER_APPROVED: "bg-green-500/20 text-green-300 border-green-500/30",
-    USER_CANCELLED: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  };
-  return (
-    <span
-      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-        style[verdict] || "bg-gray-500/20 text-gray-400 border-gray-500/30"
-      }`}
-    >
-      {verdict}
-    </span>
-  );
-}
+
+const canaryDark = themeQuartz.withParams({
+  backgroundColor: "#0a0a0a",
+  foregroundColor: "#e5e5e5",
+  headerBackgroundColor: "#111111",
+  headerTextColor: "#9ca3af",
+  borderColor: "#1a1a1a",
+  rowHoverColor: "rgba(255,255,255,0.02)",
+  headerFontSize: 11,
+  fontSize: 13,
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  rowBorder: { color: "#1a1a1a" },
+  columnBorder: false,
+  wrapperBorder: false,
+  cellHorizontalPadding: 16,
+  headerColumnResizeHandleColor: "#333",
+  spacing: 6,
+});
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -95,6 +100,85 @@ export default function Dashboard() {
     }
     load();
   }, []);
+
+  const columnDefs = useMemo<ColDef<Transaction>[]>(
+    () => [
+      {
+        headerName: "TIME",
+        field: "created_at",
+        flex: 1.2,
+        minWidth: 140,
+        cellStyle: { color: "#9ca3af", fontSize: "11px" } as CellStyle,
+      },
+      {
+        headerName: "PRODUCT",
+        field: "product_name",
+        flex: 1.5,
+        minWidth: 160,
+        valueFormatter: (p) => p.value || "—",
+      },
+      {
+        headerName: "MERCHANT",
+        field: "merchant_domain",
+        flex: 1.3,
+        minWidth: 140,
+        cellStyle: { fontSize: "11px" } as CellStyle,
+        valueFormatter: (p) => p.value || "—",
+      },
+      {
+        headerName: "PRICE",
+        field: "product_price",
+        flex: 0.7,
+        minWidth: 80,
+        valueFormatter: (p) =>
+          p.value != null ? `$${Number(p.value).toFixed(2)}` : "—",
+      },
+      {
+        headerName: "TRUST",
+        field: "trust_score",
+        flex: 0.6,
+        minWidth: 70,
+        cellRenderer: (p: ICellRendererParams<Transaction>) => {
+          if (p.value == null) return "—";
+          const color =
+            p.value >= 70
+              ? "#4ade80"
+              : p.value >= 40
+              ? "#facc15"
+              : "#f87171";
+          return `<span style="font-weight:700;color:${color}">${p.value}</span>`;
+        },
+      },
+      {
+        headerName: "VERDICT",
+        field: "verdict",
+        flex: 0.9,
+        minWidth: 100,
+        cellRenderer: (p: ICellRendererParams<Transaction>) => {
+          const styles: Record<string, string> = {
+            BLOCKED: "background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)",
+            APPROVED: "background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)",
+            AWAITING_USER: "background:rgba(234,179,8,0.15);color:#facc15;border:1px solid rgba(234,179,8,0.3)",
+            USER_APPROVED: "background:rgba(34,197,94,0.15);color:#86efac;border:1px solid rgba(34,197,94,0.3)",
+            USER_CANCELLED: "background:rgba(107,114,128,0.15);color:#9ca3af;border:1px solid rgba(107,114,128,0.3)",
+          };
+          const s = styles[p.value] || styles["USER_CANCELLED"];
+          return `<span style="${s};font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:4px">${p.value}</span>`;
+        },
+      },
+      {
+        headerName: "BYPASS",
+        field: "bypass_attempted",
+        flex: 0.5,
+        minWidth: 60,
+        cellRenderer: (p: ICellRendererParams<Transaction>) =>
+          p.value
+            ? '<span style="color:#f87171;font-size:11px;font-weight:700">🚨 YES</span>'
+            : '<span style="color:#4b5563;font-size:11px">No</span>',
+      },
+    ],
+    []
+  );
 
   if (loading) {
     return (
@@ -171,86 +255,31 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Transactions table */}
+        {/* AG Grid Transaction History */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
           className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl overflow-hidden"
         >
-          <div className="px-6 py-4 border-b border-[var(--card-border)]">
+          <div className="px-6 py-4 border-b border-[var(--card-border)] flex items-center justify-between">
             <h2 className="font-semibold">Transaction History</h2>
+            <span className="text-[10px] text-gray-600 uppercase tracking-widest">
+              Powered by AG Grid
+            </span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-[var(--card-border)]">
-                  <th className="px-6 py-3">Time</th>
-                  <th className="px-6 py-3">Product</th>
-                  <th className="px-6 py-3">Merchant</th>
-                  <th className="px-6 py-3">Price</th>
-                  <th className="px-6 py-3">Trust Score</th>
-                  <th className="px-6 py-3">Verdict</th>
-                  <th className="px-6 py-3">Bypass</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx, i) => (
-                  <motion.tr
-                    key={tx.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 + i * 0.05 }}
-                    className="border-b border-[var(--card-border)] hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="px-6 py-3 text-gray-400 font-mono text-xs">
-                      {tx.created_at}
-                    </td>
-                    <td className="px-6 py-3">{tx.product_name || "—"}</td>
-                    <td className="px-6 py-3 font-mono text-xs">
-                      {tx.merchant_domain || "—"}
-                    </td>
-                    <td className="px-6 py-3 font-mono">
-                      {tx.product_price ? `$${tx.product_price.toFixed(2)}` : "—"}
-                    </td>
-                    <td className="px-6 py-3">
-                      {tx.trust_score != null ? (
-                        <span
-                          className={`font-mono font-bold ${
-                            tx.trust_score >= 70
-                              ? "text-green-400"
-                              : tx.trust_score >= 40
-                              ? "text-yellow-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {tx.trust_score}
-                        </span>
-                      ) : (
-                        <span className="text-gray-600">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-3">
-                      <VerdictBadge verdict={tx.verdict} />
-                    </td>
-                    <td className="px-6 py-3">
-                      {tx.bypass_attempted ? (
-                        <span className="text-red-400 text-xs font-bold">
-                          🚨 YES
-                        </span>
-                      ) : (
-                        <span className="text-gray-600 text-xs">No</span>
-                      )}
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-            {transactions.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                No transactions yet. Run the demo first!
-              </div>
-            )}
+          <div style={{ height: Math.max(320, transactions.length * 48 + 56) }}>
+            <AgGridReact<Transaction>
+              theme={canaryDark}
+              rowData={transactions}
+              columnDefs={columnDefs}
+              animateRows={true}
+              domLayout="normal"
+              rowHeight={44}
+              headerHeight={40}
+              suppressCellFocus={true}
+              overlayNoRowsTemplate='<div style="padding:40px;color:#6b7280">No transactions yet. Run the demo first!</div>'
+            />
           </div>
         </motion.div>
       </div>

@@ -565,7 +565,7 @@ function HomeInner() {
                 }
               />
               <button
-                onClick={startPurchase}
+                onClick={() => startPurchase()}
                 disabled={isRunning || !query.trim()}
                 className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   isRunning || !query.trim()
