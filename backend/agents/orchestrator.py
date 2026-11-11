@@ -257,7 +257,7 @@ class Orchestrator:
         allowed, reason = self.bypass_monitor.check_action("create_order")
         if not allowed:
             session.bypass_attempted = True
-            emit("bypass_alert", f"🚨 BYPASS ATTEMPT CAUGHT: {reason}")
+            emit("bypass_alert", f"BYPASS ATTEMPT CAUGHT: {reason}")
 
     def _save_to_db(self, session: SessionResult, selected, canary_enabled: bool = True):
         """Persist transaction to SQLite."""

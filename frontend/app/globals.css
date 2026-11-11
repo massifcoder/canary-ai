@@ -2,36 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #07070f;
-  --foreground: #f0f0f5;
+/* ─── Theme tokens ─── */
+:root,
+:root[data-theme="dark"] {
+  --bg: #07070f;
+  --bg-panel: rgba(255, 255, 255, 0.02);
+  --bg-card: rgba(255, 255, 255, 0.025);
+  --bg-card-hover: rgba(255, 255, 255, 0.04);
+  --bg-input: rgba(255, 255, 255, 0.03);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-bright: rgba(255, 255, 255, 0.1);
+  --text: #f0f0f5;
+  --text-secondary: #a1a1aa;
+  --text-dim: #63636e;
+  --brand: #a5b4fc;
+  --brand-secondary: #818cf8;
+  --brand-dim: rgba(129, 140, 248, 0.1);
+  --brand-glow: rgba(129, 140, 248, 0.2);
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #6366f1;
+  --shopper: #a5b4fc;
+  --guardian: #c4b5fd;
   --card: #0c0c16;
   --card-border: rgba(255, 255, 255, 0.06);
-  --brand: #f5b731;
-  --brand-dim: rgba(245, 183, 49, 0.08);
-  --shopper-color: #60a5fa;
-  --guardian-color: #f59e0b;
-  --system-color: #6b7280;
-  --bypass-color: #ef4444;
-  --accent-green: #22c55e;
-  --accent-red: #ef4444;
-  --accent-yellow: #eab308;
-  --accent-blue: #3b82f6;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-input: rgba(255, 255, 255, 0.9);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-bright: rgba(0, 0, 0, 0.12);
+  --text: #1a1a2e;
+  --text-secondary: #4b5563;
+  --text-dim: #6b7280;
+  --brand: #4338ca;
+  --brand-secondary: #3730a3;
+  --brand-dim: rgba(67, 56, 202, 0.06);
+  --brand-glow: rgba(67, 56, 202, 0.1);
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #b45309;
+  --info: #4338ca;
+  --shopper: #4338ca;
+  --guardian: #5b21b6;
+  --card: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(0, 0, 0, 0.08);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background 0.4s ease, color 0.3s ease;
 }
 
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
 
+/* ─── Animations ─── */
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
   50% { box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.3); }
 }
 .bypass-glow { animation: pulse-glow 1s ease-in-out 3; }
+
+/* ─── Utility ─── */
+.glass {
+  background: var(--bg-panel);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
