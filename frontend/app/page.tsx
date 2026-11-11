@@ -300,7 +300,8 @@ function HomeInner() {
     stepsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events, sessionResult]);
 
-  const startPurchase = useCallback(async () => {
+  const startPurchase = useCallback(async (canaryOverride?: boolean) => {
+    const canary = canaryOverride !== undefined ? canaryOverride : canaryEnabled;
     setEvents([]);
     setSessionResult(null);
     setIsRunning(true);
@@ -311,7 +312,7 @@ function HomeInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query,
-          canary: canaryEnabled,
+          canary,
           sites: DEMO_SITES,
         }),
       });
@@ -356,8 +357,6 @@ function HomeInner() {
   }, [query, canaryEnabled]);
 
   // Auto-start via ?auto=on or ?auto=off
-  const canaryRef = useRef(canaryEnabled);
-  canaryRef.current = canaryEnabled;
   useEffect(() => {
     if (autoStarted.current) return;
     const auto = searchParams.get("auto");
@@ -365,10 +364,7 @@ function HomeInner() {
       autoStarted.current = true;
       const wantCanary = auto === "on";
       setCanaryEnabled(wantCanary);
-      // Wait for state to settle, then start
-      setTimeout(() => {
-        startPurchase();
-      }, 600);
+      setTimeout(() => startPurchase(wantCanary), 300);
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
