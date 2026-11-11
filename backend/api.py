@@ -133,7 +133,7 @@ async def start_purchase(request: Request):
 
 @app.post("/api/consent/{session_id}")
 async def user_consent(session_id: str, request: Request):
-    """User approves or denies a gray-zone transaction."""
+    """User approves or denies. If denied, streams fallback analysis via SSE."""
     body = await request.json()
     consented = body.get("consent", False)
 
@@ -145,11 +145,45 @@ async def user_consent(session_id: str, request: Request):
     if not orch:
         return {"error": "Orchestrator not found"}
 
-    result = orch.handle_user_consent(session, consented)
-    return {
-        "verdict": result.final_verdict,
-        "order_id": result.order_id,
-    }
+    event_queue: asyncio.Queue = asyncio.Queue()
+
+    def on_event(role: str, content: str, data: dict | None = None):
+        event_queue.put_nowait({"role": role, "content": content, "data": data})
+
+    async def run_consent():
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, lambda: orch.handle_user_consent(session, consented, on_event)
+        )
+        event_queue.put_nowait(None)
+
+    async def event_stream():
+        task = asyncio.create_task(run_consent())
+
+        while True:
+            event = await event_queue.get()
+            if event is None:
+                break
+            yield f"data: {json.dumps({'type': 'event', **event})}\n\n"
+
+        result = sessions[session_id]
+        summary = {
+            "type": "session_end",
+            "session_id": session_id,
+            "verdict": result.final_verdict,
+            "order_id": result.order_id,
+            "bypass_attempted": result.bypass_attempted,
+        }
+        if result.guardian_verdict:
+            summary["trust_score"] = result.guardian_verdict.trust_report.trust_score
+            summary["trust_breakdown"] = result.guardian_verdict.trust_report.breakdown
+            if result.guardian_verdict.expectation_report:
+                summary["expectation"] = result.guardian_verdict.expectation_report.to_dict()
+        yield f"data: {json.dumps(summary)}\n\n"
+
+        await task
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 # --- Dashboard endpoints ---

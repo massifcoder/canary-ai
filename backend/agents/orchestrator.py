@@ -26,6 +26,7 @@ class SessionResult:
     final_verdict: str = "PENDING"
     order_id: str | None = None
     bypass_attempted: bool = False
+    rejected_domains: list[str] = field(default_factory=list)
 
     def add_event(self, role: str, content: str, data: dict | None = None):
         self.events.append(ConversationEvent(role=role, content=content, data=data))
@@ -136,7 +137,12 @@ class Orchestrator:
         return session
 
     def handle_user_consent(self, session: SessionResult, consented: bool, on_event: callable = None) -> SessionResult:
-        """Called when the user makes a decision on a gray-zone transaction."""
+        """Called when the user makes a decision on a gray-zone transaction.
+
+        If user denies, tries the next best listing that hasn't been rejected.
+        Returns session with updated verdict — AWAITING_USER again if fallback
+        is also in the gray zone, or a final verdict otherwise.
+        """
         def emit(role: str, content: str, data: dict | None = None):
             session.add_event(role, content, data)
             if on_event:
@@ -151,11 +157,79 @@ class Orchestrator:
             order_id = self._create_order(selected, emit)
             session.order_id = order_id
             session.final_verdict = "USER_APPROVED"
-        else:
-            emit("user", "Cancel this purchase.")
-            emit("system", "Transaction cancelled by user.")
-            session.final_verdict = "USER_CANCELLED"
+            return session
 
+        # User declined — try next option
+        rejected = session.shopper_result.selected
+        session.rejected_domains.append(rejected.merchant_domain)
+        emit("user", f"Declined {rejected.merchant_domain}. Find an alternative.")
+
+        # Find next viable listing
+        candidates = [
+            l for l in session.shopper_result.listings
+            if l.merchant_domain not in session.rejected_domains
+            and l.price > 0
+        ]
+        if not candidates:
+            emit("system", "No more alternatives available. Transaction cancelled.")
+            session.final_verdict = "USER_CANCELLED"
+            self._save_to_db(session, rejected)
+            return session
+
+        # Pick next cheapest
+        next_pick = min(candidates, key=lambda x: x.price)
+        session.shopper_result.selected = next_pick
+        emit("shopper", f"Trying alternative: {next_pick.name} at ${next_pick.price:.2f} from {next_pick.merchant_domain}")
+
+        # Browse the new site for product details
+        if next_pick.merchant_url and "super-cheap" not in next_pick.merchant_url:
+            emit("shopper", f"Browsing {next_pick.merchant_domain}...")
+            site_data = self.shopper.browse_site(next_pick.merchant_url)
+            if "error" not in site_data:
+                body = site_data.get("bodySnippet", "")
+                if body and len(body) > 50:
+                    next_pick.description = body[:2000]
+                    next_pick.reviews_text = body[:1000]
+
+        # Generate new claims
+        claims = self.shopper.generate_claims(next_pick)
+        session.shopper_result.claims = claims
+
+        # Run Guardian on the new pick
+        self.bypass_monitor.reset()
+        self.bypass_monitor.state = self.bypass_monitor.state.__class__("awaiting_guardian")
+        emit("system", f"Guardian Agent is analyzing {next_pick.merchant_domain}...")
+
+        guardian_verdict = self.guardian.analyze(
+            merchant_domain=next_pick.merchant_domain,
+            product_query=session.query,
+            offered_price=next_pick.price,
+            reviews_text=next_pick.reviews_text,
+            shopper_claims=claims,
+            product_name=next_pick.name,
+            product_description=next_pick.description,
+            on_step=lambda step, data: emit("guardian", f"[{step}]", data),
+        )
+        session.guardian_verdict = guardian_verdict
+
+        for msg in guardian_verdict.messages:
+            emit("guardian", msg["content"])
+
+        verdict = guardian_verdict.verdict
+        session.final_verdict = verdict
+
+        if verdict == "APPROVED":
+            emit("guardian", "Transaction APPROVED. Creating PayPal order...")
+            order_id = self._create_order(next_pick, emit)
+            session.order_id = order_id
+        elif verdict == "BLOCKED":
+            emit("guardian", f"Transaction BLOCKED. {guardian_verdict.reasoning}")
+            self._simulate_bypass_attempt(session, next_pick, emit)
+        elif verdict == "AWAITING_USER":
+            emit("guardian", f"Needs your review: {guardian_verdict.reasoning}")
+            emit("system", "Waiting for user decision...")
+
+        self._save_to_db(session, next_pick)
         return session
 
     def _create_order(self, selected, emit) -> str | None:

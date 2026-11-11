@@ -382,25 +382,37 @@ function HomeInner() {
   const sendConsent = useCallback(
     async (consent: boolean) => {
       if (!sessionId) return;
+      setSessionResult(null);
+      setIsRunning(true);
+
       const res = await fetch(`${API_URL}/api/consent/${sessionId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ consent }),
       });
-      const data = await res.json();
-      setEvents((prev) => [
-        ...prev,
-        {
-          type: "event",
-          role: "system",
-          content: consent
-            ? `User approved. Order: ${data.order_id || "pending"}`
-            : "User cancelled the transaction.",
-        },
-      ]);
-      setSessionResult((prev) =>
-        prev ? { ...prev, verdict: data.verdict, order_id: data.order_id } : null
-      );
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const evt: SSEEvent = JSON.parse(line.slice(6));
+          if (evt.type === "event") {
+            setEvents((prev) => [...prev, evt]);
+          } else if (evt.type === "session_end") {
+            setSessionResult(evt);
+          }
+        }
+      }
+      setIsRunning(false);
     },
     [sessionId]
   );
