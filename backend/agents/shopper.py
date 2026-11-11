@@ -228,6 +228,21 @@ class ShopperAgent:
         result.selected = selected
         result.add_message("shopper", f"Best deal: {selected.name} at ${selected.price:.2f} from {selected.merchant_domain}")
 
+        # Browse the actual site to get real product description
+        if selected.merchant_url and not selected.merchant_url.startswith("https://super-cheap"):
+            result.add_message("shopper", f"Browsing {selected.merchant_domain} for product details...")
+            site_data = self.browse_site(selected.merchant_url)
+            if "error" not in site_data:
+                body = site_data.get("bodySnippet", "")
+                if body and len(body) > 50:
+                    selected.description = body[:2000]
+                    selected.reviews_text = body[:1000]
+                    result.add_message("shopper", f"Extracted product details from {selected.merchant_domain} ({site_data.get('bodyLength', 0)} chars)")
+                else:
+                    result.add_message("shopper", f"Site loaded but minimal content found")
+            else:
+                result.add_message("shopper", f"Could not browse site: {site_data.get('error', 'unknown')[:80]}")
+
         # Generate claims
         claims = self.generate_claims(selected)
         result.claims = claims

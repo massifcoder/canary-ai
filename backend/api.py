@@ -122,6 +122,8 @@ async def start_purchase(request: Request):
         if result and result.guardian_verdict:
             summary["trust_score"] = result.guardian_verdict.trust_report.trust_score
             summary["trust_breakdown"] = result.guardian_verdict.trust_report.breakdown
+            if result.guardian_verdict.expectation_report:
+                summary["expectation"] = result.guardian_verdict.expectation_report.to_dict()
         yield f"data: {json.dumps(summary)}\n\n"
 
         await task

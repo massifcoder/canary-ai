@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from backend.trust.scorer import compute_trust_score, TrustReport
+from backend.trust.expectation_analyzer import analyze_expectation, ExpectationReport
 from backend.safety.assumption_verifier import verify_assumptions, AssumptionReport
 from backend.safety.bypass_monitor import BypassMonitor
 
@@ -12,6 +13,7 @@ from backend.safety.bypass_monitor import BypassMonitor
 class GuardianVerdict:
     trust_report: TrustReport
     assumption_report: AssumptionReport
+    expectation_report: ExpectationReport | None
     verdict: str  # APPROVED, BLOCKED, AWAITING_USER
     reasoning: str
     messages: list[dict] = field(default_factory=list)
@@ -53,6 +55,8 @@ class GuardianAgent:
         offered_price: float,
         reviews_text: str,
         shopper_claims: list[str],
+        product_name: str = "",
+        product_description: str = "",
         on_step: callable = None,
     ) -> GuardianVerdict:
         """Run full Guardian analysis: trust scoring + assumption verification."""
@@ -83,7 +87,31 @@ class GuardianAgent:
             f"registry={trust_report.breakdown['registry']})"
         )
 
-        # Phase 2: Challenge the Shopper's claims
+        # Phase 2: Product Expectation vs Reality
+        expectation_report = None
+        if product_description and len(product_description) > 20:
+            add_msg("Analyzing product: does it match what the buyer expects?")
+            if on_step:
+                on_step("expectation_start", {"query": product_query, "product": product_name})
+            expectation_report = analyze_expectation(
+                api_key=self.anthropic_api_key,
+                user_query=product_query,
+                product_name=product_name,
+                product_description=product_description,
+                product_price=offered_price,
+            )
+            if on_step:
+                on_step("expectation_done", expectation_report.to_dict())
+            add_msg(
+                f"Expectation Match: {expectation_report.match_score}/100 — "
+                f"Expects: {expectation_report.user_expects} | "
+                f"Reality: {expectation_report.product_reality}"
+            )
+            if expectation_report.mismatches:
+                for m in expectation_report.mismatches[:3]:
+                    add_msg(f"  ⚠ Mismatch: {m}")
+
+        # Phase 3: Challenge the Shopper's claims
         add_msg("Challenging Shopper Agent's assumptions...")
         evidence = {
             "domain_age_days": trust_report.domain_report.domain_age_days,
@@ -108,9 +136,9 @@ class GuardianAgent:
             icon = {"verified": "✓", "unverified": "?", "false": "✗"}.get(claim_v.verdict, "?")
             add_msg(f"  [{icon}] {claim_v.claim} → {claim_v.verdict} ({claim_v.risk_level})")
 
-        # Phase 3: Determine verdict
-        verdict = self._determine_verdict(trust_report, assumption_report)
-        reasoning = self._build_reasoning(trust_report, assumption_report, verdict)
+        # Phase 4: Determine verdict
+        verdict = self._determine_verdict(trust_report, assumption_report, expectation_report)
+        reasoning = self._build_reasoning(trust_report, assumption_report, expectation_report, verdict)
         add_msg(f"Verdict: {verdict} — {reasoning}")
 
         # Update bypass monitor
@@ -119,22 +147,30 @@ class GuardianAgent:
         result = GuardianVerdict(
             trust_report=trust_report,
             assumption_report=assumption_report,
+            expectation_report=expectation_report,
             verdict=verdict,
             reasoning=reasoning,
             messages=messages,
         )
         return result
 
-    def _determine_verdict(self, trust: TrustReport, assumptions: AssumptionReport) -> str:
-        """Combine trust score verdict with assumption verification."""
+    def _determine_verdict(
+        self, trust: TrustReport, assumptions: AssumptionReport, expectation: ExpectationReport | None
+    ) -> str:
+        """Combine trust score, assumption verification, and expectation match."""
         if trust.verdict == "BLOCKED" or assumptions.recommendation == "block":
             return "BLOCKED"
+        if expectation and expectation.match_score < 25:
+            return "BLOCKED"
+        if expectation and expectation.match_score < 50:
+            return "AWAITING_USER"
         if trust.verdict == "APPROVED" and assumptions.recommendation == "approve":
             return "APPROVED"
         return "AWAITING_USER"
 
     def _build_reasoning(
-        self, trust: TrustReport, assumptions: AssumptionReport, verdict: str
+        self, trust: TrustReport, assumptions: AssumptionReport,
+        expectation: ExpectationReport | None, verdict: str,
     ) -> str:
         if verdict == "BLOCKED":
             issues = []
@@ -142,11 +178,16 @@ class GuardianAgent:
                 issues.append(f"trust score critically low ({trust.trust_score}/100)")
             if assumptions.recommendation == "block":
                 issues.append(f"assumption check: {assumptions.reasoning}")
+            if expectation and expectation.match_score < 25:
+                issues.append(f"product mismatch ({expectation.match_score}/100): {expectation.product_reality}")
             return "Transaction blocked: " + "; ".join(issues) if issues else "Blocked by Guardian"
 
         if verdict == "APPROVED":
+            extra = ""
+            if expectation:
+                extra = f", product match {expectation.match_score}/100"
             return (
-                f"Merchant verified — trust score {trust.trust_score}/100, "
+                f"Merchant verified — trust score {trust.trust_score}/100{extra}, "
                 f"all claims verified. Safe to proceed."
             )
 
@@ -154,6 +195,8 @@ class GuardianAgent:
         concerns = []
         if trust.trust_score <= 60:
             concerns.append(f"moderate trust score ({trust.trust_score}/100)")
+        if expectation and expectation.match_score < 50:
+            concerns.append(f"product may not match expectations ({expectation.match_score}/100)")
         for c in assumptions.claims:
             if c.verdict in ("unverified", "false"):
                 concerns.append(f"unverified claim: {c.claim}")

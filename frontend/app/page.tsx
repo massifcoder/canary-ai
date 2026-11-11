@@ -143,6 +143,8 @@ function StepCard({
     review_analysis_done: "📝 Review Analysis",
     registry_check_start: "🏢 Checking Registry...",
     registry_check_done: "🏢 Registry Check",
+    expectation_start: "🎯 Analyzing Product Expectations...",
+    expectation_done: "🎯 Expectation vs Reality",
     trust_score_calculated: "📊 Trust Score",
   };
 
@@ -151,6 +153,7 @@ function StepCard({
     price_check_done: ["market_avg", "price_deviation_pct", "price_score", "sources_count"],
     review_analysis_done: ["authenticity_score", "red_flags", "reasoning"],
     registry_check_done: ["registry_score"],
+    expectation_done: ["match_score", "user_expects", "product_reality", "mismatches", "reasoning"],
     trust_score_calculated: ["trust_score", "verdict", "breakdown"],
   };
 

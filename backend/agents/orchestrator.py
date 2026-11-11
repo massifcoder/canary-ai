@@ -103,6 +103,8 @@ class Orchestrator:
             offered_price=selected.price,
             reviews_text=selected.reviews_text,
             shopper_claims=shopper_result.claims,
+            product_name=selected.name,
+            product_description=selected.description,
             on_step=lambda step, data: emit("guardian", f"[{step}]", data),
         )
         session.guardian_verdict = guardian_verdict
@@ -190,6 +192,8 @@ class Orchestrator:
             trust_score = session.guardian_verdict.trust_report.trust_score
             breakdown = session.guardian_verdict.trust_report.breakdown
             assumption_results = session.guardian_verdict.assumption_report.to_dict()
+            if session.guardian_verdict.expectation_report:
+                assumption_results["expectation"] = session.guardian_verdict.expectation_report.to_dict()
             verdict_reason = session.guardian_verdict.reasoning
 
         tx = Transaction(
