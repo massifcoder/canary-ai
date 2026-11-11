@@ -290,7 +290,7 @@ function HomeInner() {
   const [query, setQuery] = useState("Buy Sony WH-1000XM5 headphones");
   const [sessionResult, setSessionResult] = useState<SSEEvent | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [liveSearch, setLiveSearch] = useState(false);
+  const [liveSearch, setLiveSearch] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const stepsEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
