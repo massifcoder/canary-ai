@@ -139,14 +139,14 @@ export default function Dashboard() {
         flex: 0.6,
         minWidth: 70,
         cellRenderer: (p: ICellRendererParams<Transaction>) => {
-          if (p.value == null) return "—";
+          if (p.value == null) return <span style={{ color: "#4b5563" }}>—</span>;
           const color =
             p.value >= 70
               ? "#4ade80"
               : p.value >= 40
               ? "#facc15"
               : "#f87171";
-          return `<span style="font-weight:700;color:${color}">${p.value}</span>`;
+          return <span style={{ fontWeight: 700, color }}>{p.value}</span>;
         },
       },
       {
@@ -155,15 +155,23 @@ export default function Dashboard() {
         flex: 0.9,
         minWidth: 100,
         cellRenderer: (p: ICellRendererParams<Transaction>) => {
-          const styles: Record<string, string> = {
-            BLOCKED: "background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)",
-            APPROVED: "background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)",
-            AWAITING_USER: "background:rgba(234,179,8,0.15);color:#facc15;border:1px solid rgba(234,179,8,0.3)",
-            USER_APPROVED: "background:rgba(34,197,94,0.15);color:#86efac;border:1px solid rgba(34,197,94,0.3)",
-            USER_CANCELLED: "background:rgba(107,114,128,0.15);color:#9ca3af;border:1px solid rgba(107,114,128,0.3)",
+          const colors: Record<string, { bg: string; fg: string; border: string }> = {
+            BLOCKED: { bg: "rgba(239,68,68,0.15)", fg: "#f87171", border: "rgba(239,68,68,0.3)" },
+            APPROVED: { bg: "rgba(34,197,94,0.15)", fg: "#4ade80", border: "rgba(34,197,94,0.3)" },
+            AWAITING_USER: { bg: "rgba(234,179,8,0.15)", fg: "#facc15", border: "rgba(234,179,8,0.3)" },
+            USER_APPROVED: { bg: "rgba(34,197,94,0.15)", fg: "#86efac", border: "rgba(34,197,94,0.3)" },
+            USER_CANCELLED: { bg: "rgba(107,114,128,0.15)", fg: "#9ca3af", border: "rgba(107,114,128,0.3)" },
           };
-          const s = styles[p.value] || styles["USER_CANCELLED"];
-          return `<span style="${s};font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:4px">${p.value}</span>`;
+          const c = colors[p.value] || colors["USER_CANCELLED"];
+          return (
+            <span style={{
+              background: c.bg, color: c.fg, border: `1px solid ${c.border}`,
+              fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+              padding: "2px 8px", borderRadius: 4,
+            }}>
+              {p.value}
+            </span>
+          );
         },
       },
       {
@@ -173,8 +181,8 @@ export default function Dashboard() {
         minWidth: 60,
         cellRenderer: (p: ICellRendererParams<Transaction>) =>
           p.value
-            ? '<span style="color:#f87171;font-size:11px;font-weight:700">🚨 YES</span>'
-            : '<span style="color:#4b5563;font-size:11px">No</span>',
+            ? <span style={{ color: "#f87171", fontSize: 11, fontWeight: 700 }}>YES</span>
+            : <span style={{ color: "#4b5563", fontSize: 11 }}>No</span>,
       },
     ],
     []
