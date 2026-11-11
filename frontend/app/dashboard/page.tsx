@@ -46,31 +46,30 @@ function StatCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl p-6"
+      className="bg-white/[0.02] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5"
     >
-      <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+      <div className="text-[9px] text-gray-500 uppercase tracking-[0.15em] font-bold mb-2">
         {label}
       </div>
-      <div className={`text-3xl font-bold font-mono ${color}`}>{value}</div>
+      <div className={`text-3xl font-black font-mono ${color}`}>{value}</div>
     </motion.div>
   );
 }
 
-
 const canaryDark = themeQuartz.withParams({
-  backgroundColor: "#0a0a0a",
+  backgroundColor: "#09091a",
   foregroundColor: "#e5e5e5",
-  headerBackgroundColor: "#111111",
-  headerTextColor: "#9ca3af",
-  borderColor: "#1a1a1a",
+  headerBackgroundColor: "#0c0c18",
+  headerTextColor: "#71717a",
+  borderColor: "rgba(255,255,255,0.04)",
   rowHoverColor: "rgba(255,255,255,0.02)",
-  headerFontSize: 11,
-  fontSize: 13,
+  headerFontSize: 10,
+  fontSize: 12,
   fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-  rowBorder: { color: "#1a1a1a" },
+  rowBorder: { color: "rgba(255,255,255,0.03)" },
   columnBorder: false,
   wrapperBorder: false,
   cellHorizontalPadding: 16,
@@ -108,7 +107,7 @@ export default function Dashboard() {
         field: "created_at",
         flex: 1.2,
         minWidth: 140,
-        cellStyle: { color: "#9ca3af", fontSize: "11px" } as CellStyle,
+        cellStyle: { color: "#71717a", fontSize: "11px" } as CellStyle,
       },
       {
         headerName: "PRODUCT",
@@ -139,13 +138,9 @@ export default function Dashboard() {
         flex: 0.6,
         minWidth: 70,
         cellRenderer: (p: ICellRendererParams<Transaction>) => {
-          if (p.value == null) return <span style={{ color: "#4b5563" }}>—</span>;
+          if (p.value == null) return <span style={{ color: "#3f3f46" }}>—</span>;
           const color =
-            p.value >= 70
-              ? "#4ade80"
-              : p.value >= 40
-              ? "#facc15"
-              : "#f87171";
+            p.value >= 70 ? "#10b981" : p.value >= 40 ? "#f59e0b" : "#ef4444";
           return <span style={{ fontWeight: 700, color }}>{p.value}</span>;
         },
       },
@@ -156,19 +151,27 @@ export default function Dashboard() {
         minWidth: 100,
         cellRenderer: (p: ICellRendererParams<Transaction>) => {
           const colors: Record<string, { bg: string; fg: string; border: string }> = {
-            BLOCKED: { bg: "rgba(239,68,68,0.15)", fg: "#f87171", border: "rgba(239,68,68,0.3)" },
-            APPROVED: { bg: "rgba(34,197,94,0.15)", fg: "#4ade80", border: "rgba(34,197,94,0.3)" },
-            AWAITING_USER: { bg: "rgba(234,179,8,0.15)", fg: "#facc15", border: "rgba(234,179,8,0.3)" },
-            USER_APPROVED: { bg: "rgba(34,197,94,0.15)", fg: "#86efac", border: "rgba(34,197,94,0.3)" },
-            USER_CANCELLED: { bg: "rgba(107,114,128,0.15)", fg: "#9ca3af", border: "rgba(107,114,128,0.3)" },
+            BLOCKED: { bg: "rgba(239,68,68,0.1)", fg: "#f87171", border: "rgba(239,68,68,0.2)" },
+            APPROVED: { bg: "rgba(16,185,129,0.1)", fg: "#34d399", border: "rgba(16,185,129,0.2)" },
+            AWAITING_USER: { bg: "rgba(245,158,11,0.1)", fg: "#fbbf24", border: "rgba(245,158,11,0.2)" },
+            USER_APPROVED: { bg: "rgba(16,185,129,0.1)", fg: "#6ee7b7", border: "rgba(16,185,129,0.2)" },
+            USER_CANCELLED: { bg: "rgba(107,114,128,0.1)", fg: "#9ca3af", border: "rgba(107,114,128,0.2)" },
           };
           const c = colors[p.value] || colors["USER_CANCELLED"];
           return (
-            <span style={{
-              background: c.bg, color: c.fg, border: `1px solid ${c.border}`,
-              fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-              padding: "2px 8px", borderRadius: 4,
-            }}>
+            <span
+              style={{
+                background: c.bg,
+                color: c.fg,
+                border: `1px solid ${c.border}`,
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                padding: "2px 8px",
+                borderRadius: 4,
+                letterSpacing: "0.04em",
+              }}
+            >
               {p.value}
             </span>
           );
@@ -180,99 +183,102 @@ export default function Dashboard() {
         flex: 0.5,
         minWidth: 60,
         cellRenderer: (p: ICellRendererParams<Transaction>) =>
-          p.value
-            ? <span style={{ color: "#f87171", fontSize: 11, fontWeight: 700 }}>YES</span>
-            : <span style={{ color: "#4b5563", fontSize: 11 }}>No</span>,
+          p.value ? (
+            <span style={{ color: "#f87171", fontSize: 11, fontWeight: 700 }}>YES</span>
+          ) : (
+            <span style={{ color: "#3f3f46", fontSize: 11 }}>No</span>
+          ),
       },
     ],
-    []
+    [],
   );
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading dashboard...</div>
+        <div className="text-gray-600 text-sm">Loading dashboard…</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Ambient background */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: [
+              "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245,183,49,0.03), transparent 70%)",
+              "radial-gradient(ellipse 50% 50% at 100% 50%, rgba(59,130,246,0.015), transparent 60%)",
+            ].join(","),
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-[var(--card-border)] px-6 py-4 flex items-center justify-between">
+      <header className="relative z-10 border-b border-white/[0.06] px-6 py-4 flex items-center justify-between bg-white/[0.015] backdrop-blur-xl">
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-500 text-lg">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-500/10 border border-amber-500/20 flex items-center justify-center text-lg shadow-lg shadow-amber-500/5">
             🐤
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Canary Dashboard</h1>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-white">Canary Dashboard</h1>
+            <span className="text-[9px] text-amber-500/40 font-semibold tracking-[0.2em] uppercase">
+              Transaction Monitor
+            </span>
+          </div>
         </div>
         <a
           href="/"
-          className="text-sm text-gray-400 hover:text-white transition-colors"
+          className="text-[11px] text-gray-500 hover:text-amber-400 transition-colors font-medium tracking-wide"
         >
           ← Back to Demo
         </a>
       </header>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Stats row */}
+      <div className="max-w-7xl mx-auto p-6 space-y-6 relative z-10">
+        {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard label="Transactions" value={stats.total_transactions} color="text-white" delay={0} />
+            <StatCard label="Blocked" value={stats.blocked} color="text-red-400" delay={0.05} />
+            <StatCard label="Approved" value={stats.approved} color="text-emerald-400" delay={0.1} />
+            <StatCard label="Bypass Attempts" value={stats.bypass_attempts} color="text-red-400" delay={0.15} />
             <StatCard
-              label="Total Transactions"
-              value={stats.total_transactions}
-              color="text-white"
-              delay={0}
-            />
-            <StatCard
-              label="Blocked"
-              value={stats.blocked}
-              color="text-red-400"
-              delay={0.1}
-            />
-            <StatCard
-              label="Approved"
-              value={stats.approved}
-              color="text-green-400"
-              delay={0.2}
-            />
-            <StatCard
-              label="Bypass Attempts"
-              value={stats.bypass_attempts}
-              color="text-red-400"
-              delay={0.3}
-            />
-            <StatCard
-              label="Avg Trust Score"
+              label="Avg Trust"
               value={stats.avg_trust_score}
               color={
                 stats.avg_trust_score >= 70
-                  ? "text-green-400"
+                  ? "text-emerald-400"
                   : stats.avg_trust_score >= 40
-                  ? "text-yellow-400"
+                  ? "text-amber-400"
                   : "text-red-400"
               }
-              delay={0.4}
+              delay={0.2}
             />
-            <StatCard
-              label="Block Rate"
-              value={`${stats.block_rate}%`}
-              color="text-orange-400"
-              delay={0.5}
-            />
+            <StatCard label="Block Rate" value={`${stats.block_rate}%`} color="text-amber-400" delay={0.25} />
           </div>
         )}
 
-        {/* AG Grid Transaction History */}
+        {/* AG Grid */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-[var(--card)] border border-[var(--card-border)] rounded-xl overflow-hidden"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden backdrop-blur-sm"
         >
-          <div className="px-6 py-4 border-b border-[var(--card-border)] flex items-center justify-between">
-            <h2 className="font-semibold">Transaction History</h2>
-            <span className="text-[10px] text-gray-600 uppercase tracking-widest">
+          <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-white">Transaction History</h2>
+            <span className="text-[9px] text-gray-600 uppercase tracking-[0.15em] font-bold">
               Powered by AG Grid
             </span>
           </div>
@@ -286,7 +292,7 @@ export default function Dashboard() {
               rowHeight={44}
               headerHeight={40}
               suppressCellFocus={true}
-              overlayNoRowsTemplate='<div style="padding:40px;color:#6b7280">No transactions yet. Run the demo first!</div>'
+              overlayNoRowsTemplate='<div style="padding:40px;color:#3f3f46;font-size:13px">No transactions yet — run the demo first</div>'
             />
           </div>
         </motion.div>
