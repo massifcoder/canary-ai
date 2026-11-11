@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0f;
+  --foreground: #e4e4e7;
+  --card: #111118;
+  --card-border: #1e1e2e;
+  --accent-green: #22c55e;
+  --accent-red: #ef4444;
+  --accent-yellow: #eab308;
+  --accent-blue: #3b82f6;
+  --accent-purple: #a855f7;
+  --shopper-color: #60a5fa;
+  --guardian-color: #f97316;
+  --system-color: #6b7280;
+  --bypass-color: #ef4444;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.event-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.3); }
+}
+
+.bypass-glow {
+  animation: pulse-glow 1s ease-in-out 3;
+}
+
+@keyframes score-fill {
+  from { width: 0%; }
+}
+
+.score-bar-animate {
+  animation: score-fill 1s ease-out;
+}

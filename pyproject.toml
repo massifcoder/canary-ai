@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canary-ai"
+version = "0.1.0"
+description = "Trust verification for agentic commerce — your canary for AI-powered shopping"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Vishal Sharma", email = "vishalsharma243527@gmail.com"},
+]
+keywords = ["ai", "trust", "commerce", "paypal", "agents", "security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+]
+
+dependencies = [
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "anthropic>=0.30",
+    "paypal-agent-toolkit>=1.1.0",
+    "kernel>=0.146.0",
+    "python-whois>=0.9",
+    "python-dotenv>=1.0",
+    "httpx>=0.25",
+]
+
+[project.urls]
+Homepage = "https://github.com/massifcoder/canary-ai"
+Repository = "https://github.com/massifcoder/canary-ai"
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
