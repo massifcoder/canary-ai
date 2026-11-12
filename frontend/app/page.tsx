@@ -14,6 +14,7 @@ const DEMO_SITES = [
     domain: "super-cheap-electronics.xyz",
     name: "Sony WH-1000XM5 Wireless Headphones",
     price: 45.99,
+    url: "https://super-cheap-electronics.xyz/sony-wh1000xm5",
     description: "Brand new Sony headphones, 80% off! Limited time!",
     reviews:
       "Amazing deal! Best purchase ever! - John. Got mine in 2 days, perfect condition! - Sarah. Unbelievable price! - Mike.",
@@ -22,6 +23,7 @@ const DEMO_SITES = [
     domain: "amazon.com",
     name: "Sony WH-1000XM5 Wireless Headphones",
     price: 298.0,
+    url: "https://www.amazon.com/Sony-WH-1000XM5-Headphones-Hands-Free-WH1000XM5/dp/B0CGHS428V",
     description: "Sony WH-1000XM5 noise canceling headphones",
     reviews:
       "Great noise canceling but pricey. Battery lasts 30 hours. Sound quality excellent. - Verified Purchase",
@@ -381,7 +383,7 @@ function HomeInner() {
   const [query, setQuery] = useState("Buy Sony WH-1000XM5 headphones");
   const [sessionResult, setSessionResult] = useState<SSEEvent | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [liveSearch, setLiveSearch] = useState(true);
+  const [liveSearch, setLiveSearch] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const stepsEndRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();

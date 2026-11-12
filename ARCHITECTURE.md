@@ -114,59 +114,41 @@ This is NOT a middleware/filter. It's a **two-agent adversarial system:**
 ## Directory Structure
 
 ```
-canary/
+canary-ai/
+├── README.md
 ├── ARCHITECTURE.md
-├── script.md
-├── README.md                      # Open source readme
-├── pyproject.toml                 # "pip install canary-ai"
+├── requirements.txt               # Python dependencies
+├── cred.env.example               # Template for API keys
+├── start.sh                       # Quick start script (both servers)
 ├── backend/
-│   ├── main.py                    # FastAPI app, SSE endpoints
-│   ├── requirements.txt
+│   ├── api.py                     # FastAPI app, SSE streaming endpoints
 │   ├── agents/
-│   │   ├── shopper.py             # Shopper Agent (LangChain + PayPal Toolkit)
-│   │   ├── guardian.py            # Guardian Agent (Canary core)
-│   │   └── orchestrator.py        # Manages Shopper ↔ Guardian debate
+│   │   ├── shopper.py             # Shopper Agent — browses sites, finds products
+│   │   ├── guardian.py            # Guardian Agent — trust analysis, claim verification
+│   │   └── orchestrator.py        # Coordinates Shopper ↔ Guardian debate
 │   ├── trust/
-│   │   ├── scorer.py              # Merchant trust scoring engine
-│   │   ├── domain_checker.py      # WHOIS + SSL analysis
-│   │   ├── price_checker.py       # Channel3 API price comparison
-│   │   ├── review_analyzer.py     # LLM review authenticity analysis
-│   │   └── registry_checker.py    # Business registry lookup
+│   │   ├── scorer.py              # Weighted trust score engine (0-100)
+│   │   ├── domain_checker.py      # WHOIS lookup + SSL certificate validation
+│   │   ├── price_checker.py       # Channel3 API market price comparison
+│   │   ├── review_analyzer.py     # Claude LLM fake review detection
+│   │   └── expectation_analyzer.py # Product-user expectation matching
 │   ├── safety/
 │   │   ├── assumption_verifier.py # LLM-as-judge for agent claims
-│   │   ├── bypass_monitor.py      # Catches unauthorized PayPal calls
-│   │   └── user_consent.py        # Gray-zone user confirmation flow
-│   ├── browser/
-│   │   └── kernel_browser.py      # Kernel SDK integration
-│   └── db/
-│       ├── models.py              # Transaction, Merchant, Score models
-│       └── database.py            # SQLite setup
+│   │   └── bypass_monitor.py      # State machine catching unauthorized PayPal calls
+│   ├── db/
+│   │   └── models.py              # SQLite models: transactions, merchants, bypass_attempts
+│   └── tests/                     # Integration tests for each component
 ├── frontend/
 │   ├── package.json
-│   ├── next.config.js
-│   ├── tailwind.config.js
 │   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx               # Split-screen demo page
-│   │   └── dashboard/
-│   │       └── page.tsx           # Analytics dashboard
-│   ├── components/
-│   │   ├── AgentChat.tsx          # Left panel — agent conversation
-│   │   ├── CanaryPanel.tsx        # Right panel — step showcaser
-│   │   ├── StepCard.tsx           # Individual step with animation
-│   │   ├── TrustScore.tsx         # Animated trust score gauge
-│   │   ├── BypassAlert.tsx        # Bypass detection alert
-│   │   ├── VerdictBanner.tsx      # BLOCKED / APPROVED banner
-│   │   └── dashboard/
-│   │       ├── TransactionTable.tsx   # AG Grid table
-│   │       ├── TrustDistribution.tsx  # Score distribution chart
-│   │       ├── BypassLog.tsx          # Bypass attempts log
-│   │       └── StatsOverview.tsx      # Summary cards
-│   └── lib/
-│       ├── sse.ts                 # SSE connection to backend
-│       └── types.ts               # Shared TypeScript types
-└── deploy/
-    └── render.yaml                # Render deployment config
+│   │   ├── layout.tsx             # Root layout with theme initialization
+│   │   ├── page.tsx               # Main demo UI — split-screen agent chat + trust panel
+│   │   ├── dashboard/page.tsx     # Analytics dashboard with AG Grid
+│   │   ├── ThreeBackground.tsx    # Boids flocking animation (Canvas 2D)
+│   │   └── globals.css            # Theme system (dark/light) with CSS variables
+│   ├── tailwind.config.ts
+│   └── tsconfig.json
+└── DEVPOST.md                     # Devpost submission text
 ```
 
 ## Data Flow — Full Transaction

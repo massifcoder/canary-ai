@@ -1,6 +1,7 @@
 cred.env
 .env
 *.env
+!cred.env.example
 __pycache__/
 *.pyc
 .venv/
@@ -11,3 +12,6 @@ dist/
 *.db-shm
 *.db-wal
 .DS_Store
+*.mp4
+*.mov
+*.avi
