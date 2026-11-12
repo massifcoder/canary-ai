@@ -8,7 +8,7 @@ import type { ColDef, ICellRendererParams, CellStyle } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 interface Stats {
   total_transactions: number;

@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 
 const AnimatedBackground = dynamic(() => import("./ThreeBackground"), { ssr: false });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 const DEMO_SITES = [
   {
