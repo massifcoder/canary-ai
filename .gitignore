@@ -15,3 +15,9 @@ dist/
 *.mp4
 *.mov
 *.avi
+*.mp3
+*.wav
+voiceover/
+VIDEO_SCRIPT.md
+VOICEOVER_GUIDE.md
+script.md
